@@ -1,0 +1,36 @@
+---
+- hosts: all
+  sudo: true
+  vars:
+    masters_group: masters
+    masters_iface: eth1
+  pre_tasks:
+  - name: Add zulu repo
+    get_url: url="http://repos.azulsystems.com/rhel/zulu.repo" dest="/etc/yum.repos.d/zulu.repo"
+  - yum: name=libselinux-python,zulu-8,http://repos.mesosphere.io/el/6/noarch/RPMS/mesosphere-el-repo-6-2.noarch.rpm,mesos
+  - template: src=zk.j2 dest=/etc/mesos/zk
+  - lineinfile: dest=/etc/default/mesos line="IP={{hostvars[inventory_hostname]['ansible_' + masters_iface]['ipv4']['address']}}" create=true
+- hosts: masters
+  vars:
+    masters_group: masters
+    masters_iface: eth1
+  sudo: true
+  pre_tasks:
+  - yum: name=http://archive.cloudera.com/cdh4/one-click-install/redhat/6/x86_64/cloudera-cdh-4-0.x86_64.rpm,zookeeper,marathon
+  - service: name=mesos-slave enabled=false
+  - command: "zookeeper-server-initialize --myid={{groups[masters_group].index(inventory_hostname)+1}}"
+    args:
+      creates: /var/lib/zookeeper/myid
+  - template: src=zoo.cfg.j2 dest=/etc/zookeeper/conf/zoo.cfg
+  - command: "zookeeper-server start"
+  - template: src=quorum.j2 dest=/etc/mesos-master/quorum
+  - lineinfile: dest=/etc/mesos-master/hostname line="{{inventory_hostname}}" create=true
+  - lineinfile: dest=/etc/marathon/conf/hostname line="{{inventory_hostname}}" create=true
+  - service: name=mesos-master state=restarted enabled=true
+  - service: name=marathon state=restarted enabled=true
+- hosts: slaves
+  sudo: true
+  pre_tasks:
+  - service: name=mesos-master enabled=false
+  - lineinfile: dest=/etc/mesos-slave/hostname line="{{inventory_hostname}}" create=true
+  - service: name=mesos-slave state=restarted enabled=true

@@ -27,5 +27,5 @@ dataDir=/var/lib/zookeeper
 # the port at which the clients will connect
 clientPort=2181
 {% for server in groups[masters_group] %}
-server.{{groups[masters_group].index(server)+1}}={{hostvars[server]['ansible_' + masters_iface]['ipv4']['address']}}:2888:3888
+server.{{groups[masters_group].index(server)+1}}={{hostvars[server]['ansible_' + net_iface]['ipv4']['address']}}:2888:3888
 {% endfor %}

@@ -1,1 +1,1 @@
-zk://{% for server in groups[masters_group] %}{{hostvars[server]['ansible_' + masters_iface]['ipv4']['address']}}:2181{% if not loop.last %},{% endif %}{% endfor %}/mesos
+zk://{% for server in groups[masters_group] %}{{hostvars[server]['ansible_' + net_iface]['ipv4']['address']}}:2181{% if not loop.last %},{% endif %}{% endfor %}/mesos

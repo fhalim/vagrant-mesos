@@ -3,17 +3,18 @@
   sudo: true
   vars:
     masters_group: masters
-    masters_iface: eth1
+    net_iface: eth1
   pre_tasks:
   - name: Add zulu repo
     get_url: url="http://repos.azulsystems.com/rhel/zulu.repo" dest="/etc/yum.repos.d/zulu.repo"
   - yum: name=libselinux-python,zulu-8,http://repos.mesosphere.io/el/6/noarch/RPMS/mesosphere-el-repo-6-2.noarch.rpm,mesos
   - template: src=zk.j2 dest=/etc/mesos/zk
-  - lineinfile: dest=/etc/default/mesos line="IP={{hostvars[inventory_hostname]['ansible_' + masters_iface]['ipv4']['address']}}" create=true
+  - lineinfile: dest=/etc/default/mesos line="IP={{hostvars[inventory_hostname]['ansible_' + net_iface]['ipv4']['address']}}" create=true
+  - lineinfile: dest=/etc/default/mesos line="IP=0.0.0.0" state=absent
 - hosts: masters
   vars:
     masters_group: masters
-    masters_iface: eth1
+    net_iface: eth1
   sudo: true
   pre_tasks:
   - yum: name=http://archive.cloudera.com/cdh4/one-click-install/redhat/6/x86_64/cloudera-cdh-4-0.x86_64.rpm,zookeeper,marathon
@@ -26,11 +27,15 @@
   - template: src=quorum.j2 dest=/etc/mesos-master/quorum
   - lineinfile: dest=/etc/mesos-master/hostname line="{{inventory_hostname}}" create=true
   - lineinfile: dest=/etc/marathon/conf/hostname line="{{inventory_hostname}}" create=true
-  - service: name=mesos-master state=restarted enabled=true
-  - service: name=marathon state=restarted enabled=true
+  - service: name=mesos-master state=started enabled=true
+  - service: name=marathon state=started enabled=true
 - hosts: slaves
   sudo: true
   pre_tasks:
   - service: name=mesos-master enabled=false
+  - yum: name=http://mirror.pnl.gov/epel/6/i386/epel-release-6-8.noarch.rpm,docker-io
+  - service: name=docker state=started
   - lineinfile: dest=/etc/mesos-slave/hostname line="{{inventory_hostname}}" create=true
-  - service: name=mesos-slave state=restarted enabled=true
+  - lineinfile: dest=/etc/mesos-slave/containerizers line="docker,mesos" create=true
+  - lineinfile: dest=/etc/mesos-slave/executor_registration_timeout line="5mins" create=true
+  - service: name=mesos-slave state=started enabled=true

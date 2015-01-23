@@ -27,8 +27,9 @@
   - template: src=quorum.j2 dest=/etc/mesos-master/quorum
   - lineinfile: dest=/etc/mesos-master/hostname line="{{inventory_hostname}}" create=true
   - lineinfile: dest=/etc/marathon/conf/hostname line="{{inventory_hostname}}" create=true
+  - lineinfile: dest=/etc/marathon/conf/task_launch_timeout line="30000" create=true
   - service: name=mesos-master state=started enabled=true
-  - service: name=marathon state=started enabled=true
+  - service: name=marathon state=restarted enabled=true
 - hosts: slaves
   sudo: true
   pre_tasks:
